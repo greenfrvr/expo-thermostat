@@ -1,7 +1,7 @@
 import { Droplets } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { ThemedText } from "./ThemedText";
+import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
 
 type Props = {
   isEnabled: boolean;
@@ -10,7 +10,7 @@ type Props = {
 }
 
 const _temperatureColor = '#b5b5b5';
-const _humidityColor = '#b5b5b5'  ;
+const _humidityColor = '#b5b5b5';
 
 export default function Display(props: Props) {
   const {
@@ -19,22 +19,27 @@ export default function Display(props: Props) {
     humidity,
   } = props;
 
+  const opacityStyle = useAnimatedStyle(() => {
+    return {
+      opacity: withTiming(isEnabled ? 1 : 0.5, { duration: 300 }),
+    };
+  });
+
   return (
-    <View style={styles.container}>
-      <ThemedText style={styles.unitText} lightColor={_temperatureColor}>°F</ThemedText>
+    <Animated.View style={[styles.container, opacityStyle]}>
+      <Animated.Text style={styles.unitText}>°F</Animated.Text>
 
-      <ThemedText style={styles.temperature}>
+      <Animated.Text style={styles.temperature}>
         {temperature}
-      </ThemedText>
+      </Animated.Text>
 
-      {/* Humidity */}
       <View style={styles.humidityContainer}>
         <Droplets size={16} color={_humidityColor} />
-        <ThemedText style={styles.humidityText} lightColor={_humidityColor}>
+        <Animated.Text style={styles.humidityText}>
           {humidity}%
-        </ThemedText>
+        </Animated.Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -49,6 +54,7 @@ const styles = StyleSheet.create({
   },
   unitText: {
     fontSize: 18,
+    color: _temperatureColor,
     fontFamily: 'SF-Pro-Rounded-Semibold',
     marginBottom: 4,
   },

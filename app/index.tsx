@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function ThermostatScreen() {
   const [temperature, setTemperature] = useState(76);
   const [fanSpeed, setFanSpeed] = useState(0);
-  const [isEnabled, setIsEnabled] = useState(true);
+  const [isEnabled, setIsEnabled] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState('Living Room');
   const [mode, setMode] = useState<'cool' | 'heat' | 'auto'>('cool');
 

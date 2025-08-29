@@ -29,6 +29,12 @@ export default function BottomControls(props: Props) {
 
   const theme = useTheme();
 
+  const opacityStyle = useAnimatedStyle(() => {
+    return {
+      opacity: withTiming(isEnabled ? 1 : 0.5, { duration: 300 }),
+    };
+  });
+
   const coolButtonAnim = useAnimatedStyle(() => {
     const isActive = mode === 'cool';
     return {
@@ -87,11 +93,13 @@ export default function BottomControls(props: Props) {
   });
 
   return (
-    <View>
+    <Animated.View style={opacityStyle}>
       <View style={styles.controlsContainer}>
+
         <AnimatedTouchableOpacity
           style={[styles.autoButton, autoButtonAnim]}
           onPress={() => setMode('auto')}
+          disabled={!isEnabled}
         >
           <View style={styles.autoButtonContent}>
             <ThemedText style={[styles.autoText, mode === 'auto' && { color: theme.autoColor }]}>Auto</ThemedText>
@@ -107,6 +115,7 @@ export default function BottomControls(props: Props) {
           <AnimatedTouchableOpacity
             style={[styles.modeButton, coolButtonAnim]}
             onPress={() => setMode('cool')}
+            disabled={!isEnabled}
           >
             <View style={styles.buttonContent}>
               <Animated.View style={coolIconAnim}>
@@ -119,6 +128,7 @@ export default function BottomControls(props: Props) {
           <AnimatedTouchableOpacity
             style={[styles.modeButton, heatButtonAnim]}
             onPress={() => setMode('heat')}
+            disabled={!isEnabled}
           >
             <View style={styles.buttonContent}>
               <Animated.View style={heatIconAnim}>
@@ -138,7 +148,7 @@ export default function BottomControls(props: Props) {
         mode={mode}
         onFanValueChange={onFanValueChange}
       />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -162,7 +172,7 @@ const styles = StyleSheet.create({
   },
   activeIindicator: {
     position: 'absolute',
-    height: 2.5,
+    height: 3,
     left: 16,
     right: 16,
     bottom: 0,

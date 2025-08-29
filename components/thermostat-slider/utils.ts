@@ -16,8 +16,11 @@ export type OuterTicksParams = {
   outerOffset?: number;
 };
 
-export const gaussian = (x: number, mu: number, sigma: number) =>
-  Math.exp(-((x - mu) * (x - mu)) / (2 * sigma * sigma));
+export const gaussian = (x: number, mu: number, sigma: number) => {
+  return Math.exp(-((x - mu) * (x - mu)) / (2 * sigma * sigma));
+}
+
+export const pxToRad = (px: number, r: number) => px / r;
 
 export const createBellTicksPath = (opts: OuterTicksParams) => {
   const {
@@ -125,4 +128,14 @@ export const createUnitsPath2 = (params: InnerTicksParams) => {
   }
 
   return Skia.Path.MakeFromSVGString(path);
+};
+
+export const arcPath = (cx: number, cy: number, r: number, a0: number, a1: number) => {
+  const x0 = cx + r * Math.cos(a0);
+  const y0 = cy + r * Math.sin(a0);
+  const x1 = cx + r * Math.cos(a1);
+  const y1 = cy + r * Math.sin(a1);
+  const large = Math.abs(a1 - a0) > Math.PI ? 1 : 0;
+  const sweep = a1 > a0 ? 1 : 0; // 1: CW, 0: CCW (matches SVG flags)
+  return Skia.Path.MakeFromSVGString(`M ${x0} ${y0} A ${r} ${r} 0 ${large} ${sweep} ${x1} ${y1}`)!;
 };

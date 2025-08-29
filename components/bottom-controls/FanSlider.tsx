@@ -38,7 +38,7 @@ export default function FanSlider(props: Props) {
 
   useEffect(() => {
     const normalizedValue = (value - min) / (max - min);
-    translateX.value = withTiming(normalizedValue * sliderValue.value, { duration: 200 }, (finished) => {
+    translateX.value = withTiming(normalizedValue * sliderValue.value, { duration: 400 }, (finished) => {
       if (finished) {
         movingDirection.value = 'idle';
       }
