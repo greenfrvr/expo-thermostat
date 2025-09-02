@@ -12,7 +12,7 @@ import {
 import React, { useEffect, useMemo } from 'react';
 import { Dimensions, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Easing, interpolate, runOnJS, useDerivedValue, useSharedValue, withDecay, withSequence, withTiming } from 'react-native-reanimated';
+import { Easing, interpolate, SharedValue, useDerivedValue, useSharedValue, withDecay, withSequence, withTiming } from 'react-native-reanimated';
 import { MaskBubble, MaskBubbleProps } from './MaskBubble';
 import { createBellTicksPath, createUnitsPath, createUnitsPath2, fullCirclePath, pxToRad } from './utils';
 
@@ -100,15 +100,14 @@ const bubblesConfig: Partial<MaskBubbleProps>[] = [
 
 interface ThermostatGradientCircleProps {
   isEnabled: boolean;
-  temperature: number;
-  onTemperatureChange: (temperature: number) => void;
+  temperature: SharedValue<number>;
   style?: any;
 }
 
 export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) => {
   const {
     isEnabled,
-    onTemperatureChange,
+    temperature,
     style
   } = props;
 
@@ -133,7 +132,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
 
   useDerivedValue(() => {
     const t = (1 - (rotation.value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
-    runOnJS(onTemperatureChange)(Math.round(t));
+    temperature.value = Math.round(t);
   });
 
   const gesture = Gesture.Pan()
@@ -144,14 +143,16 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
       bellAnim.value = withTiming(1, { duration: 200 });
     })
     .onUpdate(({ absoluteX, absoluteY }) => {
-      const a = Math.atan2(-(absoluteY - _centerY), (absoluteX - _center));
-      const raw = a - lastAngle.value;
-      const delta = Math.atan2(Math.sin(raw), Math.cos(raw));
+      const angle = Math.atan2(-(absoluteY - _centerY), (absoluteX - _center));
+      //angle difference from previous frame
+      const angleDiff = angle - lastAngle.value;
+      //shortest signed angular change, normalized to [-π, π]
+      const delta = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
       const newRotation = rotation.value - delta;
 
       if (newRotation > _minThreshold && newRotation < _maxThreshold) {
         rotation.value = newRotation;
-        lastAngle.value = a;
+        lastAngle.value = angle;
       } else if (newRotation < _minThreshold) {
         rotation.value = _minThreshold;
       } else if (newRotation > _maxThreshold) {
@@ -159,7 +160,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
       }
 
       const newTempValue = (1 - (rotation.value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
-      runOnJS(onTemperatureChange)(Math.round(newTempValue));
+      temperature.value = Math.round(newTempValue);
     })
     .onTouchesUp(() => {
       bellAnim.value = withTiming(0, { duration: 200 });
@@ -210,7 +211,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
   }), []);
 
   const ringSegmentArc = useMemo(() => fullCirclePath(_center, _centerY, _radius), []);
-  
+
   const bellPath = usePathInterpolation(bellAnim, [0, 1], [bellTicks, bellTicksExpanded]);
 
   const rotateProp = useDerivedValue(() => [{ rotate: rotation.value * 0.8 }]);
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0,
-    left: width / 2 + 20,
+    left: 7 * width / 11,
     right: 0,
     bottom: 0,
   },

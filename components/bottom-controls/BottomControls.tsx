@@ -1,5 +1,6 @@
 import { useTheme } from "@/hooks/useTheme";
 import { Snowflake, Sun } from "lucide-react-native";
+import React from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
 import AutoSwitch from "./AutoSwitch";
@@ -11,10 +12,10 @@ type Props = {
   fanSpeed: number;
   mode: 'cool' | 'heat' | 'auto';
   setMode: (value: 'cool' | 'heat' | 'auto') => void;
-  onFanValueChange: (value: number) => void;
+  onFanValueChange?: (value: number) => void;
 }
 
-export default function BottomControls(props: Props) {
+function Component(props: Props) {
   const {
     isEnabled,
     fanSpeed,
@@ -75,6 +76,10 @@ export default function BottomControls(props: Props) {
     </Animated.View>
   );
 }
+
+const BottomControls = React.memo(Component)
+
+export default BottomControls;
 
 const styles = StyleSheet.create({
   controlsContainer: {

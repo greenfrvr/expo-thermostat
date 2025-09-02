@@ -1,7 +1,9 @@
 import { ArrowLeft } from "lucide-react-native";
+import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
-export default function Header() {
+
+function Component() {
   return (
     <View style={styles.header}>
       <TouchableOpacity style={styles.backButton}>
@@ -10,6 +12,10 @@ export default function Header() {
     </View>
   );
 }
+
+const Header = React.memo(Component)
+
+export default Header;
 
 const styles = StyleSheet.create({
   header: {

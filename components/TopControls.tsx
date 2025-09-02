@@ -1,5 +1,6 @@
 import { useTheme } from "@/hooks/useTheme";
 import { ChevronDown } from "lucide-react-native";
+import React from "react";
 import { StyleSheet, Switch, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "./ThemedText";
 
@@ -11,7 +12,7 @@ interface TopControlsProps {
   setIsEnabled: (value: boolean) => void;
 }
 
-export default function TopControls({ mode, selectedRoom, isEnabled, setIsEnabled }: TopControlsProps) {
+function Component({ mode, selectedRoom, isEnabled, setIsEnabled }: TopControlsProps) {
   const theme = useTheme();
   const color = mode === 'cool' ? theme.coolColor : mode === 'heat' ? theme.heatColor : theme.autoColor;
 
@@ -38,6 +39,10 @@ export default function TopControls({ mode, selectedRoom, isEnabled, setIsEnable
     </View>
   );
 }
+
+const TopControls = React.memo(Component)
+
+export default TopControls;
 
 const styles = StyleSheet.create({
   roomSelector: {

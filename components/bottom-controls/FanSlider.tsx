@@ -15,7 +15,7 @@ type Props = {
   min: number;
   max: number;
   mode: 'auto' | 'cool' | 'heat';
-  onFanValueChange: (value: number) => void;
+  onFanValueChange?: (value: number) => void;
 }
 
 export default function FanSlider(props: Props) {
@@ -54,7 +54,7 @@ export default function FanSlider(props: Props) {
 
   const handleUpdate = (value: number, sliderValue: number) => {
     const actualValue = value / sliderValue * (max - min) + min;
-    onFanValueChange(actualValue);
+    onFanValueChange?.(actualValue);
   }
 
   const handleBegin = () => {

@@ -11,11 +11,13 @@ import {
   View
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export default function ThermostatScreen() {
-  const [temperature, setTemperature] = useState(76);
+  const temperature = useSharedValue(76);
+
   const [fanSpeed, setFanSpeed] = useState(0);
   const [isEnabled, setIsEnabled] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState('Living Room');
@@ -47,19 +49,18 @@ export default function ThermostatScreen() {
         <Header />
 
         <ThermostatGradientCircle
-          isEnabled={isEnabled}
           style={styles.thermostatContainer}
           temperature={temperature}
-          onTemperatureChange={setTemperature}
+          isEnabled={isEnabled}
+        />
+
+        <Display
+          isEnabled={isEnabled}
+          temperature={temperature}
+          humidity={56}
         />
 
         <View style={styles.content}>
-          <Display
-            isEnabled={isEnabled}
-            temperature={temperature}
-            humidity={56}
-          />
-
           <TopControls
             selectedRoom={selectedRoom}
             isEnabled={isEnabled}
@@ -72,10 +73,8 @@ export default function ThermostatScreen() {
             fanSpeed={fanSpeed}
             mode={mode}
             setMode={setMode}
-            onFanValueChange={() => { }}
           />
         </View>
-
 
       </ThemedView>
     </GestureHandlerRootView>

@@ -1,18 +1,19 @@
 import { Droplets } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
+import AnimateableText from 'react-native-animateable-text';
+import Animated, { SharedValue, useAnimatedProps, useAnimatedStyle, withTiming } from "react-native-reanimated";
 
 type Props = {
   isEnabled: boolean;
-  temperature: number;
+  temperature: SharedValue<number>;
   humidity: number;
 }
 
 const _temperatureColor = '#b5b5b5';
 const _humidityColor = '#b5b5b5';
 
-export default function Display(props: Props) {
+function Component(props: Props) {
   const {
     isEnabled,
     temperature,
@@ -25,13 +26,21 @@ export default function Display(props: Props) {
     };
   });
 
+
+  const animatedProps = useAnimatedProps(() => {
+    return {
+      text: temperature.value.toString(),
+    };
+  });
+
   return (
     <Animated.View style={[styles.container, opacityStyle]}>
       <Animated.Text style={styles.unitText}>°F</Animated.Text>
 
-      <Animated.Text style={styles.temperature}>
-        {temperature}
-      </Animated.Text>
+      <AnimateableText
+        animatedProps={animatedProps}
+        style={styles.temperature}
+      />
 
       <View style={styles.humidityContainer}>
         <Droplets size={16} color={_humidityColor} />
@@ -43,12 +52,17 @@ export default function Display(props: Props) {
   );
 }
 
+const Display = React.memo(Component)
+
+export default Display;
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     justifyContent: 'center',
     top: 0,
     left: 20,
+    right: 120,
     bottom: 0,
     flex: 1,
   },
@@ -67,11 +81,13 @@ const styles = StyleSheet.create({
   humidityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     marginTop: -12,
   },
   humidityText: {
     fontSize: 16,
     fontFamily: 'SF-Pro-Rounded-Semibold',
+    color: _humidityColor,
+    marginTop: 2,
   },
 });
