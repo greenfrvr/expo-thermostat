@@ -6,6 +6,8 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 
 const _propellerIcon = require('@/assets/icons/propeller.png');
+const _colorDuration = 300;
+const _hitSlop = { top: 10, bottom: 10, left: 10, right: 10 };
 
 type Props = {
   isEnabled: boolean;
@@ -15,8 +17,6 @@ type Props = {
   mode: 'auto' | 'cool' | 'heat';
   onFanValueChange: (value: number) => void;
 }
-
-const _colorDuration = 300;
 
 export default function FanSlider(props: Props) {
   const {
@@ -38,7 +38,7 @@ export default function FanSlider(props: Props) {
 
   useEffect(() => {
     const normalizedValue = (value - min) / (max - min);
-    translateX.value = withTiming(normalizedValue * sliderValue.value, { duration: 400 }, (finished) => {
+    translateX.value = withTiming(normalizedValue * sliderValue.value, { duration: 300 }, (finished) => {
       if (finished) {
         movingDirection.value = 'idle';
       }
@@ -49,7 +49,6 @@ export default function FanSlider(props: Props) {
     } else {
       movingDirection.value = 'left';
     }
-
   }, [value, min, max, sliderValue, translateX, movingDirection]);
 
 
@@ -104,7 +103,12 @@ export default function FanSlider(props: Props) {
 
   const sliderThumbAnim = useAnimatedStyle(() => {
     return {
-      transform: [{ translateX: translateX.value }],
+      transform: [
+        { translateX: translateX.value },
+        { translateY: withTiming(isEnabled ? 0 : 10, { duration: _colorDuration }) }
+      ],
+      width: withTiming(isEnabled ? 20 : 0, { duration: _colorDuration }),
+      height: withTiming(isEnabled ? 20 : 0, { duration: _colorDuration }),
     };
   });
 
@@ -114,6 +118,7 @@ export default function FanSlider(props: Props) {
         transform: [{ rotate: '0deg' }],
       }
     }
+
     return {
       transform: [{ rotate: withTiming(movingDirection.value === 'left' ? '180deg' : '0deg', { duration: _colorDuration }) }],
     };
@@ -125,6 +130,7 @@ export default function FanSlider(props: Props) {
         transform: [{ rotate: '0deg' }],
       }
     }
+
     return {
       transform: [{ rotate: withTiming(movingDirection.value === 'right' ? '180deg' : '0deg', { duration: _colorDuration }) }],
     };
@@ -136,13 +142,11 @@ export default function FanSlider(props: Props) {
 
       <View
         style={styles.slider}
-        onLayout={(event) => {
-          sliderValue.value = event.nativeEvent.layout.width;
-        }}>
+        onLayout={(event) => sliderValue.value = event.nativeEvent.layout.width}>
         <Animated.View style={[styles.sliderTrack, sliderColorAnim, trackAnim]} />
 
         <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.sliderThumb, sliderThumbAnim]} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} />
+          <Animated.View style={[styles.sliderThumb, sliderThumbAnim]} hitSlop={_hitSlop} />
         </GestureDetector>
       </View>
 
@@ -159,7 +163,7 @@ const styles = StyleSheet.create({
     gap: 20,
     paddingHorizontal: 16,
     paddingVertical: 20,
-    backgroundColor: '#1f1f1f',
+    backgroundColor: '#1d1d1d',
     borderRadius: 12,
   },
   leftIcon: {
@@ -189,11 +193,12 @@ const styles = StyleSheet.create({
   },
   sliderThumb: {
     position: 'absolute',
-    left: -10,
+    left: -18,
     width: 20,
     height: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    top: -8,
+    top: -16,
+    margin: 8,
   },
 });

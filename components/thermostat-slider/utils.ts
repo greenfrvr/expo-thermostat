@@ -139,3 +139,22 @@ export const arcPath = (cx: number, cy: number, r: number, a0: number, a1: numbe
   const sweep = a1 > a0 ? 1 : 0; // 1: CW, 0: CCW (matches SVG flags)
   return Skia.Path.MakeFromSVGString(`M ${x0} ${y0} A ${r} ${r} 0 ${large} ${sweep} ${x1} ${y1}`)!;
 };
+
+export const ringSegmentPath = (cx: number, cy: number, R: number, r: number, a0: number, a1: number) => {
+  const x = (rr: number, a: number) => cx + rr * Math.cos(a);
+  const y = (rr: number, a: number) => cy + rr * Math.sin(a);
+  const large = Math.abs(a1 - a0) > Math.PI ? 1 : 0;
+  const sweep = a1 > a0 ? 1 : 0;
+  const d =
+    `M ${x(R,a0)} ${y(R,a0)} A ${R} ${R} 0 ${large} ${sweep} ${x(R,a1)} ${y(R,a1)} ` +
+    `L ${x(r,a1)} ${y(r,a1)} A ${r} ${r} 0 ${large} ${1 - sweep} ${x(r,a0)} ${y(r,a0)} Z`;
+  return Skia.Path.MakeFromSVGString(d)!;
+};
+
+export const fullCirclePath = (cx: number, cy: number, r: number) =>
+  Skia.Path.MakeFromSVGString(
+    `M ${cx + r} ${cy}
+     A ${r} ${r} 0 1 1 ${cx - r} ${cy}
+     A ${r} ${r} 0 1 1 ${cx + r} ${cy}
+     Z`
+  )!;

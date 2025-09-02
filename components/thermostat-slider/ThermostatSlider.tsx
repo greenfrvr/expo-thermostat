@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import {
   Canvas,
   Circle,
@@ -11,9 +12,9 @@ import {
 import React, { useEffect, useMemo } from 'react';
 import { Dimensions, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Easing, runOnJS, useAnimatedStyle, useDerivedValue, useSharedValue, withDecay, withSequence, withTiming } from 'react-native-reanimated';
-import { MaskBubble } from './MaskBubble';
-import { arcPath, createBellTicksPath, createUnitsPath, createUnitsPath2, pxToRad } from './utils';
+import { Easing, interpolate, runOnJS, useDerivedValue, useSharedValue, withDecay, withSequence, withTiming } from 'react-native-reanimated';
+import { MaskBubble, MaskBubbleProps } from './MaskBubble';
+import { createBellTicksPath, createUnitsPath, createUnitsPath2, fullCirclePath, pxToRad } from './utils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -54,6 +55,49 @@ const _ticksCommonParams = {
   unitsStep: _unitsStep,
 }
 
+const bubblesConfig: Partial<MaskBubbleProps>[] = [
+  {
+    rxOffset: 12,
+    ryOffset: 12,
+    maxRadius: 24,
+  },
+  {
+    rxOffset: -12,
+    ryOffset: -12,
+    delay: 25,
+    thetaOffset: pxToRad(20, _radius),
+    maxRadius: 24,
+  },
+  {
+    rxOffset: 17,
+    ryOffset: 10,
+    thetaOffset: pxToRad(20, _radius),
+    maxRadius: 20,
+    delay: 50,
+  },
+  {
+    rxOffset: -10,
+    ryOffset: -14,
+    maxRadius: 20,
+    thetaOffset: pxToRad(22, _radius),
+    delay: 75,
+  },
+  {
+    rxOffset: 17,
+    ryOffset: 12,
+    maxRadius: 16,
+    thetaOffset: pxToRad(24, _radius),
+    delay: 100,
+  },
+  {
+    rxOffset: -12,
+    ryOffset: -17,
+    maxRadius: 16,
+    thetaOffset: pxToRad(24, _radius),
+    delay: 125,
+  },
+]
+
 interface ThermostatGradientCircleProps {
   isEnabled: boolean;
   temperature: number;
@@ -64,10 +108,11 @@ interface ThermostatGradientCircleProps {
 export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) => {
   const {
     isEnabled,
-    temperature,
     onTemperatureChange,
     style
   } = props;
+
+  const theme = useTheme();
 
   const rotation = useSharedValue(0.3);
   const lastAngle = useSharedValue(0.3);
@@ -75,22 +120,21 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
   const bellAnim = useSharedValue(0);
   const bellStartAnim = useSharedValue(1);
 
-  const opacity = useSharedValue(0.75);
-
-  useEffect(() => {
-    opacity.value = withTiming(isEnabled ? 0.75 : 0.5, { duration: 300 });
-  }, [isEnabled, opacity]);
-
-  const opacityStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value,
-    };
-  });
+  const maskAnimation = useSharedValue(0);
 
   useEffect(() => {
     bellAnim.value = withSequence(withTiming(1, { duration: 550, easing: Easing.bezier(0.25, 0.1, 0.25, 1.37) }), withTiming(0, { duration: 150, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
     bellStartAnim.value = withTiming(0, { duration: 550, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
   }, []);
+
+  useEffect(() => {
+    maskAnimation.value = withTiming(isEnabled ? 1 : 0, { duration: isEnabled ? 2400 : 700, easing: Easing.linear });
+  }, [isEnabled, maskAnimation]);
+
+  useDerivedValue(() => {
+    const t = (1 - (rotation.value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
+    runOnJS(onTemperatureChange)(Math.round(t));
+  });
 
   const gesture = Gesture.Pan()
     .onBegin(({ absoluteX, absoluteY }) => {
@@ -165,157 +209,74 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
     ..._ticksCommonParams,
   }), []);
 
+  const ringSegmentArc = useMemo(() => fullCirclePath(_center, _centerY, _radius), []);
+  
   const bellPath = usePathInterpolation(bellAnim, [0, 1], [bellTicks, bellTicksExpanded]);
 
   const rotateProp = useDerivedValue(() => [{ rotate: rotation.value * 0.8 }]);
   const rotateDecay = useDerivedValue(() => [{ rotate: rotation.value * 0.8 }]);
   const bellRotation = useDerivedValue(() => [{ rotate: bellStartAnim.value }]);
 
-  useDerivedValue(() => {
-    const t = (1 - (rotation.value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
-    runOnJS(onTemperatureChange)(Math.round(t));
-  });
-
-  // build the arc ONCE (no per-frame path creation)
-  const segmentArc = useMemo(() => arcPath(_center, _centerY, _radius, _maskStartAngle, _maskEndAngle), []);
-
-  const maskAnimation = useSharedValue(0);
-
-  useEffect(() => {
-    maskAnimation.value = withTiming(isEnabled ? 1 : 0, { duration: isEnabled ? 900 : 350, easing: Easing.linear });
-  }, [isEnabled, maskAnimation]);
-
-  const maskTransform = useDerivedValue(() => [{ rotate: Math.PI * 0.6 * maskAnimation.value }]);
+  const pathEnd = useDerivedValue(() => interpolate(maskAnimation.value, [0, 1], [0.2, 1]));
+  const circleColor = useDerivedValue(() => withTiming(isEnabled ? '#525956' : theme.buttonBgColor, { duration: 300 }));
 
   return (
     <GestureDetector gesture={gesture}>
-      <Canvas style={[styles.container, { width, height }, style, opacityStyle]}>
+      <Canvas style={[styles.container, { width, height }, style]}>
         <Circle
           cx={_center}
           cy={_centerY}
           r={_radius}
           style="stroke"
           strokeWidth={_strokeWidth}
-          color="gray"
-          opacity={opacity}
+          color={theme.buttonBgColor}
         />
 
-        <Mask
-          mask={
-            <Group>
-              <Path
-                path={segmentArc}
-                style="stroke"
-                strokeCap="round"
-                strokeWidth={_strokeWidth}
-                color="white"
-                origin={vec(_center, _centerY)}
-                transform={maskTransform}
-              />
+        <Mask mask={<Circle
+          cx={_center}
+          cy={_centerY}
+          r={_radius}
+          style="stroke"
+          strokeWidth={_strokeWidth}
+          color={'whie'}
+        />}>
+          <Group>
+            {bubblesConfig.map((bubble, index) => (
               <MaskBubble
+                key={index}
+                {...bubble}
                 center={_center}
                 centerY={_centerY}
                 radius={_radius}
                 isEnabled={isEnabled}
-                rxOffset={12}
-                ryOffset={12}
-                maxRadius={28}
-              />
+              >
+                <SweepGradient
+                  c={vec(_center, _centerY)}
+                  colors={_gradientColors}
+                  transform={rotateProp}
+                  origin={vec(_center, _centerY)}
+                />
+              </MaskBubble>
+            ))}
+          </Group>
+        </Mask>
 
-              <MaskBubble
-                center={_center}
-                centerY={_centerY}
-                radius={_radius}
-                isEnabled={isEnabled}
-                rxOffset={-12}
-                ryOffset={-12}
-                delay={25}
-                thetaOffset={pxToRad(18, _radius)}
-                maxRadius={28}
-              />
-              <MaskBubble
-                center={_center}
-                centerY={_centerY}
-                radius={_radius}
-                isEnabled={isEnabled}
-                thetaOffset={pxToRad(22, _radius)}
-                rxOffset={17}
-                ryOffset={10}
-                maxRadius={22}
-                delay={50}
-              />
-              <MaskBubble
-                center={_center}
-                centerY={_centerY}
-                radius={_radius}
-                isEnabled={isEnabled}
-                thetaOffset={pxToRad(27, _radius)}
-                rxOffset={-10}
-                ryOffset={-14}
-                maxRadius={22}
-                delay={75}
-              />
-              <MaskBubble
-                center={_center}
-                centerY={_centerY}
-                radius={_radius}
-                isEnabled={isEnabled}
-                thetaOffset={pxToRad(32, _radius)}
-                rxOffset={17}
-                ryOffset={12}
-                delay={100}
-              />
-              <MaskBubble
-                center={_center}
-                centerY={_centerY}
-                radius={_radius}
-                isEnabled={isEnabled}
-                thetaOffset={pxToRad(36, _radius)}
-                rxOffset={-12}
-                ryOffset={-17}
-                delay={125}
-              />
-              <MaskBubble
-                center={_center}
-                centerY={_centerY}
-                radius={_radius}
-                isEnabled={isEnabled}
-                thetaOffset={pxToRad(44, _radius)}
-                rxOffset={13}
-                ryOffset={14}
-                delay={175}
-                maxRadius={18}
-              />
-              <MaskBubble
-                center={_center}
-                centerY={_centerY}
-                radius={_radius}
-                isEnabled={isEnabled}
-                thetaOffset={pxToRad(48, _radius)}
-                rxOffset={-15}
-                ryOffset={-17}
-                delay={200}
-                maxRadius={18}
-              />
-            </Group>
-          }
+        <Path
+          path={ringSegmentArc}
+          style="stroke"
+          strokeCap="round"
+          strokeWidth={_strokeWidth}
+          color="white"
+          start={0}
+          end={pathEnd} // -> 1
         >
-          <Circle
-            cx={_center}
-            cy={_centerY}
-            r={_radius}
-            style="stroke"
-            strokeWidth={_strokeWidth}
-            strokeCap="round"
+          <SweepGradient
+            c={vec(_center, _centerY)}
+            colors={_gradientColors}
             origin={vec(_center, _centerY)}
             transform={rotateProp}
-          >
-            <SweepGradient
-              c={vec(_center, _centerY)}
-              colors={_gradientColors}
-            />
-          </Circle>
-        </Mask>
+          />
+        </Path>
 
         <Group
           origin={vec(_center, _centerY)}
@@ -325,16 +286,15 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
             path={ticks}
             style="stroke"
             strokeWidth={2}
-            opacity={opacity}
-            color={'gray'}
+            color={circleColor}
           />}
 
           {overlayTicks && <Path
             path={overlayTicks}
             style="stroke"
             strokeWidth={2}
-            opacity={0.35}
-            color={'gray'}
+            opacity={0.15}
+            color={theme.buttonBgColor}
           />}
         </Group>
 
@@ -342,8 +302,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
           path={bellPath}
           style="stroke"
           strokeWidth={2}
-          opacity={opacity}
-          color="gray"
+          color={circleColor}
           origin={vec(_center, _centerY)}
           transform={bellRotation}
         />}

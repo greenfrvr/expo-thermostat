@@ -38,16 +38,6 @@ export default function ThermostatScreen() {
   }, [isEnabled]);
 
   useEffect(() => {
-    setTimeout(() => {
-      setFanSpeed(33);
-    }, 300);
-  }, []);
-
-  useEffect(() => {
-    console.log('fanSpeed', fanSpeed);
-  }, [fanSpeed]);
-
-  useEffect(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
   }, [mode]);
 
@@ -63,13 +53,13 @@ export default function ThermostatScreen() {
           onTemperatureChange={setTemperature}
         />
 
-        <Display
-          isEnabled={isEnabled}
-          temperature={temperature}
-          humidity={56}
-        />
-
         <View style={styles.content}>
+          <Display
+            isEnabled={isEnabled}
+            temperature={temperature}
+            humidity={56}
+          />
+
           <TopControls
             selectedRoom={selectedRoom}
             isEnabled={isEnabled}
@@ -82,9 +72,11 @@ export default function ThermostatScreen() {
             fanSpeed={fanSpeed}
             mode={mode}
             setMode={setMode}
-            onFanValueChange={() => {}}
+            onFanValueChange={() => { }}
           />
         </View>
+
+
       </ThemedView>
     </GestureHandlerRootView>
   );
