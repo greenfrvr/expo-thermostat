@@ -1,3 +1,4 @@
+import { RoomPallets } from '@/constants/Colors';
 import { useTheme } from '@/hooks/useTheme';
 import {
   Canvas,
@@ -12,7 +13,7 @@ import {
 import React, { useEffect, useMemo } from 'react';
 import { Dimensions, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Easing, interpolate, SharedValue, useDerivedValue, useSharedValue, withDecay, withSequence, withTiming } from 'react-native-reanimated';
+import { Easing, interpolate, interpolateColor, SharedValue, useDerivedValue, useSharedValue, withDecay, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { MaskBubble, MaskBubbleProps } from './MaskBubble';
 import { createBellTicksPath, createUnitsPath, createUnitsPath2, pxToRad, ringSegmentPath } from './utils';
 
@@ -21,7 +22,6 @@ const { width, height } = Dimensions.get('window');
 const _units = 600;
 const _unitsStep = 20;
 const _strokeWidth = 40;
-const _gradientColors = ['#00BFFF', '#00FF7F', '#FFD700', '#ee5f26', '#00BFFF'];
 const _minTemperature = 62;
 const _maxTemperature = 86;
 const _tempDelta = _maxTemperature - _minTemperature;
@@ -111,6 +111,7 @@ const bubblesConfig: Partial<MaskBubbleProps>[] = [
 
 interface ThermostatGradientCircleProps {
   isEnabled: boolean;
+  room: number;
   temperature: SharedValue<number>;
   style?: any;
 }
@@ -118,6 +119,7 @@ interface ThermostatGradientCircleProps {
 export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) => {
   const {
     isEnabled,
+    room,
     temperature,
     style
   } = props;
@@ -128,18 +130,25 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
   const lastAngle = useSharedValue(0.3);
 
   const bellAnim = useSharedValue(0);
-  const bellStartAnim = useSharedValue(1);
+  const bellStartAnim = useSharedValue(-1);
 
   const maskAnimation = useSharedValue(0);
+  const gradientAnim = useSharedValue(0);
 
   useEffect(() => {
     bellAnim.value = withSequence(withTiming(1, { duration: 550, easing: Easing.bezier(0.25, 0.1, 0.25, 1.37) }), withTiming(0, { duration: 150, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
-    bellStartAnim.value = withTiming(0, { duration: 550, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
   }, []);
 
   useEffect(() => {
+    gradientAnim.value = withDelay(300, withTiming(room, { duration: 300, easing: Easing.linear }));
+  }, [room, gradientAnim]);
+
+  useEffect(() => {
     maskAnimation.value = withTiming(isEnabled ? 1 : 0, { duration: isEnabled ? 3000 : 700, easing: Easing.linear });
-  }, [isEnabled, maskAnimation]);
+    bellStartAnim.value = isEnabled
+      ? withTiming(0, { duration: 1100, easing: Easing.bezier(0.25, 0.1, 0.25, 1) })
+      : withDelay(400, withTiming(-1, { duration: 700, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
+  }, [isEnabled, maskAnimation, bellStartAnim]);
 
   useDerivedValue(() => {
     const t = (1 - (rotation.value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
@@ -231,7 +240,19 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
   const bellRotation = useDerivedValue(() => [{ rotate: bellStartAnim.value }]);
 
   const pathEnd = useDerivedValue(() => interpolate(maskAnimation.value, [0, 1], [0, 1]));
-  const circleColor = useDerivedValue(() => withTiming(isEnabled ? '#525956' : theme.buttonBgColor, { duration: 300 }));
+  const circleColor = useDerivedValue(() => {
+    return withDelay(isEnabled ? 0 : 300, withTiming(isEnabled ? '#525956' : theme.buttonBgColor, { duration: 400 }));
+  }, [isEnabled]);
+
+  const colors = useDerivedValue(() => {
+    const roomArray = [0, 1, 2, 3, 4];
+    const palettes = roomArray.map((row) => {
+      const colors = roomArray.map((col) => RoomPallets[col][row]);
+      return interpolateColor(gradientAnim.value, roomArray, colors);
+    });
+
+    return palettes;
+  }, [room, gradientAnim]);
 
   return (
     <GestureDetector gesture={gesture}>
@@ -265,7 +286,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
               >
                 <SweepGradient
                   c={vec(_center, _centerY)}
-                  colors={_gradientColors}
+                  colors={colors}
                   transform={rotateProp}
                   origin={vec(_center, _centerY)}
                 />
@@ -285,7 +306,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
         >
           <SweepGradient
             c={vec(_center, _centerY)}
-            colors={_gradientColors}
+            colors={colors}
             origin={vec(_center, _centerY)}
             transform={rotateProp}
           />

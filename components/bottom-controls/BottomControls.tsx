@@ -2,7 +2,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { Snowflake, Sun } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, withDelay, withTiming } from "react-native-reanimated";
 import AutoSwitch from "./AutoSwitch";
 import FanSlider from "./FanSlider";
 import SwitchButton from "./SwitchButton";
@@ -28,9 +28,9 @@ function Component(props: Props) {
 
   const opacityStyle = useAnimatedStyle(() => {
     return {
-      opacity: withTiming(isEnabled ? 1 : 0.75, { duration: 300 })
+      opacity: withDelay(isEnabled ? 0 : 300, withTiming(isEnabled ? 1 : 0.75, { duration: 300 }))
     };
-  });
+  }, [isEnabled]);
 
   return (
     <Animated.View

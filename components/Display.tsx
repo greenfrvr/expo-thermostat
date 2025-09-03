@@ -2,7 +2,7 @@ import { Droplets } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import AnimateableText from 'react-native-animateable-text';
-import Animated, { SharedValue, useAnimatedProps, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { SharedValue, useAnimatedProps, useAnimatedStyle, withDelay, withTiming } from "react-native-reanimated";
 
 type Props = {
   isEnabled: boolean;
@@ -22,10 +22,9 @@ function Component(props: Props) {
 
   const opacityStyle = useAnimatedStyle(() => {
     return {
-      opacity: withTiming(isEnabled ? 1 : 0.5, { duration: 300 }),
+      opacity: withDelay(isEnabled ? 0 : 300, withTiming(isEnabled ? 1 : 0.5, { duration: 300 })),
     };
-  });
-
+  }, [isEnabled]);
 
   const animatedProps = useAnimatedProps(() => {
     return {
