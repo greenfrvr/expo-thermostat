@@ -1,26 +1,32 @@
-import { Rooms } from "@/constants/Colors";
+import { Mode, RoomIndex } from "@/app";
 import { useTheme } from "@/hooks/useTheme";
 import { ChevronDown } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Modal, Pressable, StyleSheet, Switch, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "./ThemedText";
 
-
 interface TopControlsProps {
-  rooms?: string[];
-  mode: 'cool' | 'heat' | 'auto';
-  selectedRoom: number;
+  rooms: string[];
+  mode: Mode;
+  selectedRoom: RoomIndex;
   isEnabled: boolean;
   setIsEnabled: (value: boolean) => void;
-  onChangeRoom: (room: number) => void;
+  onChangeRoom: (room: RoomIndex) => void;
 }
 
-function Component({ mode, selectedRoom, isEnabled, setIsEnabled, onChangeRoom, rooms }: TopControlsProps) {
+function Component(props: TopControlsProps) {
+  const {
+    rooms,
+    mode,
+    selectedRoom,
+    isEnabled,
+    setIsEnabled,
+    onChangeRoom,
+  } = props;
+
   const theme = useTheme();
 
   const [roomModalVisible, setRoomModalVisible] = useState(false);
-
-  const availableRooms = useMemo(() => rooms ?? ['Living Room', 'Bedroom', 'Kitchen', 'Office', 'Kids Room'], [rooms]);
 
   const color = mode === 'cool' ? theme.coolColor : mode === 'heat' ? theme.heatColor : theme.autoColor;
 
@@ -29,7 +35,7 @@ function Component({ mode, selectedRoom, isEnabled, setIsEnabled, onChangeRoom, 
       <View style={styles.roomSelector} >
         <TouchableOpacity style={styles.roomButton} activeOpacity={0.8} onPress={() => setRoomModalVisible(true)}>
           <ThemedText style={styles.roomText} lightColor="#FFFFFF">
-            {Rooms[selectedRoom]}
+            {rooms[selectedRoom]}
           </ThemedText>
           <ChevronDown size={20} color="#FFFFFF" />
         </TouchableOpacity>
@@ -53,19 +59,19 @@ function Component({ mode, selectedRoom, isEnabled, setIsEnabled, onChangeRoom, 
       >
         <Pressable style={styles.backdrop} onPress={() => setRoomModalVisible(false)}>
           <Pressable style={styles.modalCard} onPress={() => { /* swallow */ }}>
-            {availableRooms.map((room, index) => {
+            {rooms.map((room, index) => {
               const isActive = index === selectedRoom;
               return (
                 <Pressable
                   key={room}
                   style={[styles.roomItem, isActive && { backgroundColor: 'rgba(255,255,255,0.08)' }]}
                   onPress={() => {
-                    onChangeRoom(index);
+                    onChangeRoom(index as RoomIndex);
                     setRoomModalVisible(false);
                   }}
                 >
                   <ThemedText style={[styles.roomItemText, isActive && { color: '#FFFFFF', fontWeight: '700' }]} lightColor="#FFFFFF">
-                    {Rooms[index]}
+                    {room}
                   </ThemedText>
                 </Pressable>
               );

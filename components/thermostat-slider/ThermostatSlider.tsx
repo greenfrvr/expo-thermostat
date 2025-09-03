@@ -13,101 +13,23 @@ import {
 import React, { useEffect, useMemo } from 'react';
 import { Dimensions, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Easing, interpolate, interpolateColor, SharedValue, useDerivedValue, useSharedValue, withDecay, withDelay, withSequence, withTiming } from 'react-native-reanimated';
-import { MaskBubble, MaskBubbleProps } from './MaskBubble';
-import { createBellTicksPath, createUnitsPath, createUnitsPath2, pxToRad, ringSegmentPath } from './utils';
+import { Easing, interpolateColor, SharedValue, useAnimatedReaction, useDerivedValue, useSharedValue, withDecay, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import { MaskBubble } from './MaskBubble';
+import { CONFIG } from './config';
+import { createBellTicksPath, createUnitsPath, createUnitsPath2, ringSegmentPath } from './utils';
 
 const { width, height } = Dimensions.get('window');
 
-const _units = 600;
-const _unitsStep = 20;
 const _strokeWidth = 40;
-const _minTemperature = 62;
-const _maxTemperature = 86;
-const _tempDelta = _maxTemperature - _minTemperature;
-const _minThreshold = -0.85;
-const _maxThreshold = 1.85;
+const _minTemperature = 62; //min temperature for the slider
+const _maxTemperature = 86; //max temperature for the slider
+const _tempDelta = _maxTemperature - _minTemperature; //delta temperature for the slider
+const _minThreshold = -0.85; //min angle for the slider
+const _maxThreshold = 1.85; //max angle for the slider
 const _thresholdDelta = _maxThreshold - _minThreshold;
-const _radius = width * 0.9;
-const _center = width + 25;
-const _centerY = height / 2 - 50;
+const _radius = width * 0.9; //radius of the circle
+const _easing = Easing.bezier(0.25, 0.1, 0.25, 1);
 
-const _bellCommonParams = {
-  center: _center,
-  centerY: _centerY,
-  radius: _radius,
-  units: _units,
-  bellCenter: 300,
-  innerBase: -36,
-  outerOffset: 28,
-};
-
-const _ticksCommonParams = {
-  center: _center,
-  centerY: _centerY,
-  radius: _radius - 28,
-  start: 0,
-  end: _units,
-  units: _units - 100,
-  unitsStep: _unitsStep,
-}
-
-const bubblesConfig: Partial<MaskBubbleProps>[] = [
-  {
-    rxOffset: 12,
-    ryOffset: 7,
-    maxRadius: 22,
-  },
-  {
-    rxOffset: -15,
-    ryOffset: -12,
-    delay: 30,
-    thetaOffset: pxToRad(20, _radius),
-    maxRadius: 22,
-  },
-  {
-    rxOffset: 17,
-    ryOffset: 10,
-    thetaOffset: pxToRad(20, _radius),
-    maxRadius: 18,
-    delay: 50,
-  },
-  {
-    rxOffset: -10,
-    ryOffset: -14,
-    maxRadius: 18,
-    thetaOffset: pxToRad(22, _radius),
-    delay: 70,
-  },
-  {
-    rxOffset: 17,
-    ryOffset: 12,
-    maxRadius: 16,
-    thetaOffset: pxToRad(24, _radius),
-    delay: 100,
-  },
-  {
-    rxOffset: -12,
-    ryOffset: -17,
-    maxRadius: 16,
-    thetaOffset: pxToRad(24, _radius),
-    delay: 110,
-  },
-  {
-    rxOffset: 17,
-    ryOffset: 12,
-    maxRadius: 12,
-    thetaOffset: pxToRad(28, _radius),
-    delay: 140,
-  },
-  {
-    rxOffset: -12,
-    ryOffset: 7,
-    maxRadius: 12,
-    thetaOffset: pxToRad(30, _radius),
-    delay: 160,
-  },
-]
 
 interface ThermostatGradientCircleProps {
   isEnabled: boolean;
@@ -126,44 +48,54 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
 
   const theme = useTheme();
 
+  const { centerX, centerY } = CONFIG;
+
   const rotation = useSharedValue(0.3);
   const lastAngle = useSharedValue(0.3);
 
-  const bellAnim = useSharedValue(0);
-  const bellStartAnim = useSharedValue(-1);
+  const bellExpandAnim = useSharedValue(0);
+  const bellRotateAnim = useSharedValue(-1);
 
-  const maskAnimation = useSharedValue(0);
-  const gradientAnim = useSharedValue(0);
-
-  useEffect(() => {
-    bellAnim.value = withSequence(withTiming(1, { duration: 550, easing: Easing.bezier(0.25, 0.1, 0.25, 1.37) }), withTiming(0, { duration: 150, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
-  }, []);
+  const fromRoom = useSharedValue(room);
+  const toRoom = useSharedValue(room);
+  const gradTransitionAnim = useSharedValue(1);
+  const gradAppearAnim = useSharedValue(0);
 
   useEffect(() => {
-    gradientAnim.value = withDelay(300, withTiming(room, { duration: 300, easing: Easing.linear }));
-  }, [room, gradientAnim]);
+    gradAppearAnim.value = withTiming(isEnabled ? 1 : 0, { duration: isEnabled ? 3000 : 700, easing: Easing.linear });
+    bellRotateAnim.value = isEnabled
+      ? withTiming(0, { duration: 1100, easing: _easing })
+      : withDelay(400, withTiming(-1, { duration: 700, easing: _easing }));
+  }, [isEnabled, gradAppearAnim, bellRotateAnim]);
 
   useEffect(() => {
-    maskAnimation.value = withTiming(isEnabled ? 1 : 0, { duration: isEnabled ? 3000 : 700, easing: Easing.linear });
-    bellStartAnim.value = isEnabled
-      ? withTiming(0, { duration: 1100, easing: Easing.bezier(0.25, 0.1, 0.25, 1) })
-      : withDelay(400, withTiming(-1, { duration: 700, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
-  }, [isEnabled, maskAnimation, bellStartAnim]);
+    if (room === toRoom.value) {
+      return;
+    }
 
-  useDerivedValue(() => {
-    const t = (1 - (rotation.value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
+    fromRoom.value = toRoom.value;
+    toRoom.value = room;
+
+    gradTransitionAnim.value = 0;
+    gradTransitionAnim.value = withTiming(1, { duration: 350, easing: Easing.linear });
+    bellExpandAnim.value = withSequence(withTiming(1, { duration: 250, easing: _easing }), withTiming(0, { duration: 250, easing: _easing }));
+  }, [room, fromRoom, toRoom, gradTransitionAnim, bellExpandAnim]);
+
+  useAnimatedReaction(() => rotation.value, (value) => {
+    const t = (1 - (value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
     temperature.value = Math.round(t);
-  });
+  }, [temperature]);
 
   const gesture = Gesture.Pan()
     .onBegin(({ absoluteX, absoluteY }) => {
       if (lastAngle.value !== 0) {
-        lastAngle.value = Math.atan2(-(absoluteY - _centerY), (absoluteX - _center));
+        lastAngle.value = Math.atan2(-(absoluteY - centerY), (absoluteX - centerX));
       }
-      bellAnim.value = withTiming(1, { duration: 200 });
+
+      bellExpandAnim.value = withTiming(1, { duration: 200, easing: _easing });
     })
     .onUpdate(({ absoluteX, absoluteY }) => {
-      const angle = Math.atan2(-(absoluteY - _centerY), (absoluteX - _center));
+      const angle = Math.atan2(-(absoluteY - centerY), (absoluteX - centerX));
       //angle difference from previous frame
       const angleDiff = angle - lastAngle.value;
       //shortest signed angular change, normalized to [-π, π]
@@ -183,17 +115,15 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
       temperature.value = Math.round(newTempValue);
     })
     .onTouchesUp(() => {
-      bellAnim.value = withTiming(0, { duration: 200 });
+      bellExpandAnim.value = withTiming(0, { duration: 200 });
     })
     .onEnd(({ absoluteX, absoluteY, velocityX, velocityY }) => {
       // position relative to center (invert Y to match angleAt)
-      const rx = absoluteX - _center;
-      const ry = - (absoluteY - _centerY);
-
+      const rx = absoluteX - centerX;
+      const ry = - (absoluteY - centerY);
       // velocity in same coord system
       const vx = velocityX;
       const vy = -velocityY;
-
       // angular velocity (rad/s): ω = (r x v) / |r|^2
       const r2 = rx * rx + ry * ry;
       if (r2 > 1) {
@@ -206,60 +136,40 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
         });
       }
 
-      bellAnim.value = withTiming(0, { duration: 200 });
+      bellExpandAnim.value = withTiming(0, { duration: 200, easing: _easing });
     })
     .enabled(isEnabled);
 
-  const bellTicks = useMemo(() => createBellTicksPath({
-    ..._bellCommonParams,
-    bellAmp: 20,
-    bellSigma: 5,
-  }), []);
+  const bellTicks = useMemo(() => createBellTicksPath(CONFIG.bellTicksParams), []);
+  const bellTicksExpanded = useMemo(() => createBellTicksPath(CONFIG.bellTicksExpandedParams), []);
+  const ticks = useMemo(() => createUnitsPath(CONFIG.ticksCommonParams), []);
+  const overlayTicks = useMemo(() => createUnitsPath2(CONFIG.ticksCommonParams), []);
+  const ringSegmentArc = useMemo(() => ringSegmentPath(centerX, centerY, _radius, _radius, Math.PI / 2, Math.PI * 3 / 2), []);
 
-  const bellTicksExpanded = useMemo(() => createBellTicksPath({
-    ..._bellCommonParams,
-    bellAmp: 24,
-    bellSigma: 7,
-  }), []);
+  const bellPath = usePathInterpolation(bellExpandAnim, [0, 1], [bellTicks, bellTicksExpanded]);
 
-  const ticks = useMemo(() => createUnitsPath({
-    ..._ticksCommonParams,
-  }), []);
+  const rotateProp = useDerivedValue(() => [{ rotate: rotation.value * 0.7 }]);
+  const bellRotation = useDerivedValue(() => [{ rotate: bellRotateAnim.value }]);
 
-  const overlayTicks = useMemo(() => createUnitsPath2({
-    ..._ticksCommonParams,
-  }), []);
-
-  // const ringSegmentArc = useMemo(() => fullCirclePath(_center, _centerY, _radius), []);
-  const ringSegmentArc = useMemo(() => ringSegmentPath(_center, _centerY, _radius, _radius, Math.PI / 2, Math.PI * 3 / 2), []);
-
-  const bellPath = usePathInterpolation(bellAnim, [0, 1], [bellTicks, bellTicksExpanded]);
-
-  const rotateProp = useDerivedValue(() => [{ rotate: rotation.value * 0.8 }]);
-  const rotateDecay = useDerivedValue(() => [{ rotate: rotation.value * 0.8 }]);
-  const bellRotation = useDerivedValue(() => [{ rotate: bellStartAnim.value }]);
-
-  const pathEnd = useDerivedValue(() => interpolate(maskAnimation.value, [0, 1], [0, 1]));
   const circleColor = useDerivedValue(() => {
     return withDelay(isEnabled ? 0 : 300, withTiming(isEnabled ? '#525956' : theme.buttonBgColor, { duration: 400 }));
   }, [isEnabled]);
 
   const colors = useDerivedValue(() => {
-    const roomArray = [0, 1, 2, 3, 4];
-    const palettes = roomArray.map((row) => {
-      const colors = roomArray.map((col) => RoomPallets[col][row]);
-      return interpolateColor(gradientAnim.value, roomArray, colors);
-    });
+    const fromPallet = RoomPallets[fromRoom.value];
+    const toPallet = RoomPallets[toRoom.value];
 
-    return palettes;
-  }, [room, gradientAnim]);
+    return [0, 1, 2, 3, 4].map((row) =>
+      interpolateColor(gradTransitionAnim.value, [0, 1], [fromPallet[row], toPallet[row]])
+    );
+  });
 
   return (
     <GestureDetector gesture={gesture}>
       <Canvas style={[styles.container, { width, height }, style]}>
         <Circle
-          cx={_center}
-          cy={_centerY}
+          cx={centerX}
+          cy={centerY}
           r={_radius}
           style="stroke"
           strokeWidth={_strokeWidth}
@@ -267,28 +177,28 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
         />
 
         <Mask mask={<Circle
-          cx={_center}
-          cy={_centerY}
+          cx={centerX}
+          cy={centerY}
           r={_radius}
           style="stroke"
           strokeWidth={_strokeWidth}
           color={'whie'}
         />}>
           <Group>
-            {bubblesConfig.map((bubble, index) => (
+            {CONFIG.bubblesConfig.map((bubble, index) => (
               <MaskBubble
                 key={index}
                 {...bubble}
-                center={_center}
-                centerY={_centerY}
+                center={centerX}
+                centerY={centerY}
                 radius={_radius}
                 isEnabled={isEnabled}
               >
                 <SweepGradient
-                  c={vec(_center, _centerY)}
+                  c={vec(centerX, centerY)}
                   colors={colors}
                   transform={rotateProp}
-                  origin={vec(_center, _centerY)}
+                  origin={vec(centerX, centerY)}
                 />
               </MaskBubble>
             ))}
@@ -302,19 +212,19 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
           strokeWidth={_strokeWidth}
           color="white"
           start={0}
-          end={pathEnd} // -> 1
+          end={gradAppearAnim} // -> 1
         >
           <SweepGradient
-            c={vec(_center, _centerY)}
+            c={vec(centerX, centerY)}
             colors={colors}
-            origin={vec(_center, _centerY)}
+            origin={vec(centerX, centerY)}
             transform={rotateProp}
           />
         </Path>
 
         <Group
-          origin={vec(_center, _centerY)}
-          transform={rotateDecay}
+          origin={vec(centerX, centerY)}
+          transform={rotateProp}
         >
           {ticks && <Path
             path={ticks}
@@ -337,7 +247,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
           style="stroke"
           strokeWidth={2}
           color={circleColor}
-          origin={vec(_center, _centerY)}
+          origin={vec(centerX, centerY)}
           transform={bellRotation}
         />}
       </Canvas>

@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import { ThemedView } from '@/components/ThemedView';
 import { ThermostatGradientCircle } from '@/components/thermostat-slider/ThermostatSlider';
 import TopControls from '@/components/TopControls';
+import { Rooms } from '@/constants/Colors';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
@@ -11,22 +12,29 @@ import {
   View
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSharedValue } from 'react-native-reanimated';
+import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+
+export type Mode = 'cool' | 'heat' | 'auto';
+export type RoomIndex = 0 | 1 | 2 | 3 | 4;
 
 export default function ThermostatScreen() {
   const temperature = useSharedValue(76);
 
   const [fanSpeed, setFanSpeed] = useState(0);
   const [isEnabled, setIsEnabled] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState('Living Room');
-  const [mode, setMode] = useState<'cool' | 'heat' | 'auto'>('cool');
+  const [selectedRoom, setSelectedRoom] = useState<RoomIndex>(0);
+  const [mode, setMode] = useState<Mode>('cool');
 
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+  const hapticeFeedback = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+
+  useAnimatedReaction(() => temperature.value, (value) => {
+    runOnJS(hapticeFeedback)();
   }, [temperature]);
 
   useEffect(() => {
@@ -49,6 +57,7 @@ export default function ThermostatScreen() {
         <Header />
 
         <ThermostatGradientCircle
+          room={selectedRoom}
           style={styles.thermostatContainer}
           temperature={temperature}
           isEnabled={isEnabled}
@@ -62,10 +71,12 @@ export default function ThermostatScreen() {
 
         <View style={styles.content}>
           <TopControls
+            rooms={Rooms}
             selectedRoom={selectedRoom}
             isEnabled={isEnabled}
             setIsEnabled={setIsEnabled}
             mode={mode}
+            onChangeRoom={setSelectedRoom}
           />
 
           <BottomControls

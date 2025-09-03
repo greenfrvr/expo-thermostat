@@ -6,12 +6,12 @@ import { pxToRad } from "./utils";
 
 const { width } = Dimensions.get('window');
 
-const _offset = pxToRad(140, width * 0.9) //(Math.PI * 14 / 180 )
-const _initTheta = Math.PI / 2 + _offset;
-const _steps = 15;                      // how many positions per loop
-const _thetaStep = Math.PI / _steps;
-const _animationDuration = 1500;
-const _durationPerStep = _animationDuration / _steps;
+const _offset = pxToRad(140, width * 0.9) //sorry for the magic numbers, didn't have time to do proper math
+const _initTheta = Math.PI / 2 + _offset; //start angle for the animation
+const _steps = 15; // how many repetitions per whole animation
+const _thetaStep = Math.PI / _steps; //angle step for each repetition
+const _animationDuration = 1500; //total animation duration
+const _durationPerStep = _animationDuration / _steps; //duration for each repetition
 
 export type MaskBubbleProps = {
   center: number;
@@ -42,7 +42,7 @@ export const MaskBubble = (props: MaskBubbleProps) => {
 
   const expandAnim = useSharedValue(0.15);
   const theta = useSharedValue(_initTheta);
-  const rFactor = useSharedValue(1.05);
+  const rFactor = useSharedValue(1.05); //just to add some randomnes to the bubble coors
 
   useEffect(() => {
     if (isEnabled) {
@@ -58,10 +58,7 @@ export const MaskBubble = (props: MaskBubbleProps) => {
       theta.value = _initTheta;
       expandAnim.value = 0.15;
     }
-  }, [isEnabled, theta, delay, expandAnim]);
-
-
-  // const rFactor = useMemo(() => (Math.random() * 2 - 1) * 1.1, []);
+  }, [isEnabled, theta, delay, expandAnim, rFactor]);
 
   const cxSV = useDerivedValue(() => center + (radius + rxOffset + rFactor.value) * Math.cos(theta.value + thetaOffset));
   const cySV = useDerivedValue(() => centerY + (radius + ryOffset + rFactor.value) * Math.sin(theta.value + thetaOffset));
