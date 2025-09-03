@@ -14,7 +14,7 @@ import { Dimensions, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Easing, interpolate, SharedValue, useDerivedValue, useSharedValue, withDecay, withSequence, withTiming } from 'react-native-reanimated';
 import { MaskBubble, MaskBubbleProps } from './MaskBubble';
-import { createBellTicksPath, createUnitsPath, createUnitsPath2, fullCirclePath, pxToRad } from './utils';
+import { createBellTicksPath, createUnitsPath, createUnitsPath2, pxToRad, ringSegmentPath } from './utils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -31,9 +31,6 @@ const _thresholdDelta = _maxThreshold - _minThreshold;
 const _radius = width * 0.9;
 const _center = width + 25;
 const _centerY = height / 2 - 50;
-
-const _maskStartAngle = Math.PI * (1 + 0.9);
-const _maskEndAngle = _maskStartAngle + Math.PI * 0.8;
 
 const _bellCommonParams = {
   center: _center,
@@ -58,29 +55,29 @@ const _ticksCommonParams = {
 const bubblesConfig: Partial<MaskBubbleProps>[] = [
   {
     rxOffset: 12,
-    ryOffset: 12,
-    maxRadius: 24,
+    ryOffset: 7,
+    maxRadius: 22,
   },
   {
-    rxOffset: -12,
+    rxOffset: -15,
     ryOffset: -12,
-    delay: 25,
+    delay: 30,
     thetaOffset: pxToRad(20, _radius),
-    maxRadius: 24,
+    maxRadius: 22,
   },
   {
     rxOffset: 17,
     ryOffset: 10,
     thetaOffset: pxToRad(20, _radius),
-    maxRadius: 20,
+    maxRadius: 18,
     delay: 50,
   },
   {
     rxOffset: -10,
     ryOffset: -14,
-    maxRadius: 20,
+    maxRadius: 18,
     thetaOffset: pxToRad(22, _radius),
-    delay: 75,
+    delay: 70,
   },
   {
     rxOffset: 17,
@@ -94,7 +91,21 @@ const bubblesConfig: Partial<MaskBubbleProps>[] = [
     ryOffset: -17,
     maxRadius: 16,
     thetaOffset: pxToRad(24, _radius),
-    delay: 125,
+    delay: 110,
+  },
+  {
+    rxOffset: 17,
+    ryOffset: 12,
+    maxRadius: 12,
+    thetaOffset: pxToRad(28, _radius),
+    delay: 140,
+  },
+  {
+    rxOffset: -12,
+    ryOffset: 7,
+    maxRadius: 12,
+    thetaOffset: pxToRad(30, _radius),
+    delay: 160,
   },
 ]
 
@@ -127,7 +138,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
   }, []);
 
   useEffect(() => {
-    maskAnimation.value = withTiming(isEnabled ? 1 : 0, { duration: isEnabled ? 2400 : 700, easing: Easing.linear });
+    maskAnimation.value = withTiming(isEnabled ? 1 : 0, { duration: isEnabled ? 3000 : 700, easing: Easing.linear });
   }, [isEnabled, maskAnimation]);
 
   useDerivedValue(() => {
@@ -210,7 +221,8 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
     ..._ticksCommonParams,
   }), []);
 
-  const ringSegmentArc = useMemo(() => fullCirclePath(_center, _centerY, _radius), []);
+  // const ringSegmentArc = useMemo(() => fullCirclePath(_center, _centerY, _radius), []);
+  const ringSegmentArc = useMemo(() => ringSegmentPath(_center, _centerY, _radius, _radius, Math.PI / 2, Math.PI * 3 / 2), []);
 
   const bellPath = usePathInterpolation(bellAnim, [0, 1], [bellTicks, bellTicksExpanded]);
 
@@ -218,7 +230,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
   const rotateDecay = useDerivedValue(() => [{ rotate: rotation.value * 0.8 }]);
   const bellRotation = useDerivedValue(() => [{ rotate: bellStartAnim.value }]);
 
-  const pathEnd = useDerivedValue(() => interpolate(maskAnimation.value, [0, 1], [0.2, 1]));
+  const pathEnd = useDerivedValue(() => interpolate(maskAnimation.value, [0, 1], [0, 1]));
   const circleColor = useDerivedValue(() => withTiming(isEnabled ? '#525956' : theme.buttonBgColor, { duration: 300 }));
 
   return (
