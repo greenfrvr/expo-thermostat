@@ -1,50 +1,103 @@
-# Welcome to your Expo app 👋
+# Smart Thermostat Control App 🌡️
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern React Native thermostat interface featuring smooth animations, gesture controls, and beautiful Skia-powered graphics. This demo app was inspired by the [Smart Thermostat Control design](https://dribbble.com/shots/25140139-Mobile-App-UI-Animation-for-Smart-Thermostat-Control) from Dribbble.
 
-## Get started
+<div align="center">
+  <img src="thermostat.gif" alt="Smart Thermostat Control Demo" width="300">
+</div>
 
-1. Install dependencies
+## ✨ Features
 
+- **Gesture-driven Circular Slider**: Interactive temperature control with smooth rotation gestures
+- **Multi-room Support**: Independent temperature settings for 5 different rooms
+- **Advanced Animations**: Powered by React Native Skia and Reanimated
+- **Haptic Feedback**: Tactile responses for enhanced user experience
+- **Custom Graphics**: Beautiful gradient circles, animated arcs, and expanding bubble effects
+- **Mode Control**: Support for Cool, Heat, and Auto modes
+- **Fan Speed Control**: Linear slider for fan speed adjustment
+- **Responsive Design**: Optimized for various screen sizes
+
+## 🎨 Design Inspiration
+
+This project recreates the stunning thermostat UI from [this Dribbble shot](https://dribbble.com/shots/25140139-Mobile-App-UI-Animation-for-Smart-Thermostat-Control), featuring:
+- Circular temperature slider with gradient fills
+- Smooth room transitions with color animations
+- Modern dark theme with vibrant accent colors
+- Intuitive gesture-based controls
+
+## 🚀 Tech Stack
+
+- **React Native** (0.79.6) - Core framework
+- **Expo** (~53.0.22) - Development platform
+- **React Native Skia** (^2.2.4) - 2D graphics and custom drawing
+- **React Native Reanimated** (~3.17.4) - High-performance animations
+- **React Native Gesture Handler** (~2.24.0) - Advanced gesture recognition
+- **React Native Animatable Text** (~0.16.0) - Update text values without React re-renders
+- **Expo Haptics** - Tactile feedback
+- **Lucide React Native** - Beautiful icons
+
+## 📱 Installation & Setup
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- Expo CLI
+- iOS Simulator / Android Emulator or physical device
+
+### Setup with Development Client
+
+This app requires a custom development client due to native modules like `react-native-animateable-text` and `lucide-react-native`.
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd thermostat
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Start the app
-
+3. **Build and install development client**
+   
+   For iOS:
    ```bash
-   npx expo start
+   npx expo run:ios
+   ```
+   
+   For Android:
+   ```bash
+   npx expo run:android
    ```
 
-In the output, you'll find options to open the app in a
+4. **Start the development server**
+   ```bash
+   npm start
+   ```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+5. **Open in your custom dev client**
+   - The app will automatically open in your newly built development client
+   - For subsequent runs, just use `npm start` and scan the QR code with your dev client
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+> **Note**: This app will not work with Expo Go due to native module dependencies. A custom development client is required.
 
-## Get a fresh project
+## 📄 License
 
-When you're ready, run:
+This project is for demonstration purposes. Feel free to use and modify for your own projects.
 
-```bash
-npm run reset-project
-```
+## 🙏 Acknowledgments
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- Original design inspiration: [Dribbble - Smart Thermostat Control](https://dribbble.com/shots/25140139-Mobile-App-UI-Animation-for-Smart-Thermostat-Control)
+- React Native Skia team for the amazing graphics library
+- React Native Reanimated team for smooth animations
+- Expo team for the excellent development platform
 
-## Learn more
+## ☕ Support
 
-To learn more about developing your project with Expo, look at the following resources:
+If you found this project helpful and would like to support future development:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+<a href="https://www.buymeacoffee.com/greenfrvr" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 56px !important;width: 217px !important;" ></a>
+---
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Built with ❤️ using React Native, Skia, and Reanimated
