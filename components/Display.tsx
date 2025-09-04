@@ -28,7 +28,7 @@ function Component(props: Props) {
 
   const animatedProps = useAnimatedProps(() => {
     return {
-      text: temperature.value.toString(),
+      text: Math.round(temperature.value).toString(),
     };
   });
 

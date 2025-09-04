@@ -6,7 +6,7 @@ import { pxToRad } from "./utils";
 
 const { width } = Dimensions.get('window');
 
-const _offset = pxToRad(140, width * 0.9) //sorry for the magic numbers, didn't have time to do proper math
+const _offset = pxToRad(150, width * 0.9) //sorry for the magic numbers, didn't have time to do proper math
 const _initTheta = Math.PI / 2 + _offset; //start angle for the animation
 const _steps = 15; // how many repetitions per whole animation
 const _thetaStep = Math.PI / _steps; //angle step for each repetition
@@ -40,7 +40,7 @@ export const MaskBubble = (props: MaskBubbleProps) => {
     children,
   } = props;
 
-  const expandAnim = useSharedValue(0.15);
+  const expandAnim = useSharedValue(0.1);
   const theta = useSharedValue(_initTheta);
   const rFactor = useSharedValue(1.05); //just to add some randomnes to the bubble coors
 
@@ -56,7 +56,7 @@ export const MaskBubble = (props: MaskBubbleProps) => {
         }), _steps, false));
     } else {
       theta.value = _initTheta;
-      expandAnim.value = 0.15;
+      expandAnim.value = 0.1;
     }
   }, [isEnabled, theta, delay, expandAnim, rFactor]);
 

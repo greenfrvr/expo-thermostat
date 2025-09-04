@@ -13,7 +13,7 @@ import {
 import React, { useEffect, useMemo } from 'react';
 import { Dimensions, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Easing, interpolateColor, SharedValue, useAnimatedReaction, useDerivedValue, useSharedValue, withDecay, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import { Easing, interpolateColor, SharedValue, useDerivedValue, useSharedValue, withDecay, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { MaskBubble } from './MaskBubble';
 import { CONFIG } from './config';
 import { createBellTicksPath, createUnitsPath, createUnitsPath2, ringSegmentPath } from './utils';
@@ -50,8 +50,7 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
 
   const { centerX, centerY } = CONFIG;
 
-  const rotation = useSharedValue(0.3);
-  const lastAngle = useSharedValue(0.3);
+  const lastAngle = useSharedValue(0);
 
   const bellExpandAnim = useSharedValue(0);
   const bellRotateAnim = useSharedValue(-1);
@@ -81,61 +80,48 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
     bellExpandAnim.value = withSequence(withTiming(1, { duration: 250, easing: _easing }), withTiming(0, { duration: 250, easing: _easing }));
   }, [room, fromRoom, toRoom, gradTransitionAnim, bellExpandAnim]);
 
-  useAnimatedReaction(() => rotation.value, (value) => {
-    const t = (1 - (value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
-    temperature.value = Math.round(t);
-  }, [temperature]);
+  const clamp = (x: number, a: number, b: number) => {
+    'worklet';
+    return Math.max(a, Math.min(b, x));
+  };
+  const tempToRot = (temp: number) => {
+    'worklet';
+    return _minThreshold + (1 - (temp - _minTemperature) / _tempDelta) * _thresholdDelta;
+  };
+  const rotToTemp = (rot: number) => {
+    'worklet';
+    return _minTemperature + (1 - (rot - _minThreshold) / _thresholdDelta) * _tempDelta;
+  };
+  // derivative for velocity mapping
+  const dTemp_dRot = -_tempDelta / _thresholdDelta;
 
   const gesture = Gesture.Pan()
     .onBegin(({ absoluteX, absoluteY }) => {
-      if (lastAngle.value !== 0) {
-        lastAngle.value = Math.atan2(-(absoluteY - centerY), (absoluteX - centerX));
-      }
-
+      lastAngle.value = Math.atan2(-(absoluteY - centerY), (absoluteX - centerX));
       bellExpandAnim.value = withTiming(1, { duration: 200, easing: _easing });
     })
     .onUpdate(({ absoluteX, absoluteY }) => {
-      const angle = Math.atan2(-(absoluteY - centerY), (absoluteX - centerX));
-      //angle difference from previous frame
-      const angleDiff = angle - lastAngle.value;
-      //shortest signed angular change, normalized to [-π, π]
-      const delta = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
-      const newRotation = rotation.value - delta;
+      const a = Math.atan2(-(absoluteY - centerY), (absoluteX - centerX));
+      const delta = Math.atan2(Math.sin(a - lastAngle.value), Math.cos(a - lastAngle.value));
+      const newRot = clamp(tempToRot(temperature.value) - delta, _minThreshold, _maxThreshold);
 
-      if (newRotation > _minThreshold && newRotation < _maxThreshold) {
-        rotation.value = newRotation;
-        lastAngle.value = angle;
-      } else if (newRotation < _minThreshold) {
-        rotation.value = _minThreshold;
-      } else if (newRotation > _maxThreshold) {
-        rotation.value = _maxThreshold;
-      }
-
-      const newTempValue = (1 - (rotation.value - _minThreshold) / _thresholdDelta) * _tempDelta + _minTemperature;
-      temperature.value = Math.round(newTempValue);
-    })
-    .onTouchesUp(() => {
-      bellExpandAnim.value = withTiming(0, { duration: 200 });
+      temperature.value = clamp(rotToTemp(newRot), _minTemperature, _maxTemperature);
+      lastAngle.value = a;
     })
     .onEnd(({ absoluteX, absoluteY, velocityX, velocityY }) => {
-      // position relative to center (invert Y to match angleAt)
-      const rx = absoluteX - centerX;
-      const ry = - (absoluteY - centerY);
-      // velocity in same coord system
-      const vx = velocityX;
-      const vy = -velocityY;
-      // angular velocity (rad/s): ω = (r x v) / |r|^2
+      const rx = absoluteX - centerX, ry = -(absoluteY - centerY);
       const r2 = rx * rx + ry * ry;
       if (r2 > 1) {
-        const omega = (rx * vy - ry * vx) / r2; // rad/s
-
-        rotation.value = withDecay({
-          velocity: -omega * 0.5,          // sign matches your update (flip if needed)
-          deceleration: 0.995,       // 0.99..0.999 (tune)
-          clamp: [_minThreshold, _maxThreshold],
+        const vx = velocityX, vy = -velocityY;
+        const omega = (rx * vy - ry * vx) / r2; // rad/s (positive CW)
+        // map angular velocity → temperature velocity
+        const tempVel = (-dTemp_dRot) * omega;  // sign: test; flip if it feels reversed
+        temperature.value = withDecay({
+          velocity: tempVel,
+          deceleration: 0.995,
+          clamp: [_minTemperature, _maxTemperature],
         });
       }
-
       bellExpandAnim.value = withTiming(0, { duration: 200, easing: _easing });
     })
     .enabled(isEnabled);
@@ -148,7 +134,8 @@ export const ThermostatGradientCircle = (props: ThermostatGradientCircleProps) =
 
   const bellPath = usePathInterpolation(bellExpandAnim, [0, 1], [bellTicks, bellTicksExpanded]);
 
-  const rotateProp = useDerivedValue(() => [{ rotate: rotation.value * 0.7 }]);
+  const rotationSV = useDerivedValue(() => tempToRot(temperature.value));
+  const rotateProp = useDerivedValue(() => [{ rotate: rotationSV.value * 0.5 }]);
   const bellRotation = useDerivedValue(() => [{ rotate: bellRotateAnim.value }]);
 
   const circleColor = useDerivedValue(() => {

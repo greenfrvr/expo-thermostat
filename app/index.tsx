@@ -12,7 +12,7 @@ import {
   View
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { runOnJS, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -26,6 +26,12 @@ export default function ThermostatScreen() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<RoomIndex>(0);
   const [mode, setMode] = useState<Mode>('cool');
+  // per-room temperatures (displayed + restored on room switch)
+  const [roomTemps, setRoomTemps] = useState<number[]>(() => Rooms.map(() => 76));
+
+  // mirror current room and lock flag for UI thread to avoid canceling animations
+  const currentRoomSV = useSharedValue<RoomIndex>(0 as RoomIndex);
+  const switchingLockSV = useSharedValue(false);
 
   const insets = useSafeAreaInsets();
 
@@ -33,9 +39,22 @@ export default function ThermostatScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
+  // commit live temperature changes back into the current room slot (on JS thread)
+  const commitTemp = (idx: number, t: number) => {
+    setRoomTemps((prev) => {
+      const next = prev.slice();
+      next[idx] = t;
+      return next;
+    });
+  };
+
   useAnimatedReaction(() => temperature.value, (value) => {
+    if (switchingLockSV.value) {
+      return; // ignore during room switch animation
+    }
+
     runOnJS(hapticeFeedback)();
-  }, [temperature]);
+  });
 
   useEffect(() => {
     if (isEnabled) {
@@ -50,6 +69,27 @@ export default function ThermostatScreen() {
   useEffect(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
   }, [mode]);
+
+  // when room changes → animate slider temperature to that room's stored value
+  useEffect(() => {
+    if (selectedRoom === currentRoomSV.value) {
+      return;
+    }
+
+    //update temp value before switching to other room
+    commitTemp(currentRoomSV.value, temperature.value);
+
+    currentRoomSV.value = selectedRoom;
+    switchingLockSV.value = true;
+    const target = roomTemps[selectedRoom] ?? 76;
+
+    temperature.value = withTiming(target, { duration: 220 }, (finished) => {
+      'worklet';
+      if (finished) {
+        switchingLockSV.value = false;
+      }
+    });
+  }, [selectedRoom, roomTemps, temperature, currentRoomSV, switchingLockSV]);
 
   return (
     <GestureHandlerRootView style={styles.container}>
